@@ -57,6 +57,21 @@ func main() {
 		logger.Fatal("failed to init event collector", zap.Error(err))
 	}
 
+	appLogAnalyzer, err := collector.NewAppLogAnalyzer(cfg, logger, sndr)
+	if err != nil {
+		logger.Fatal("failed to init app log analyzer", zap.Error(err))
+	}
+
+	clusterHealthCollector, err := collector.NewClusterHealthCollector(cfg, logger, sndr)
+	if err != nil {
+		logger.Fatal("failed to init cluster health collector", zap.Error(err))
+	}
+
+	securityCollector, err := collector.NewSecurityThreatCollector(cfg, logger, sndr)
+	if err != nil {
+		logger.Fatal("failed to init security threat collector", zap.Error(err))
+	}
+
 	// Start collectors
 	go func() {
 		if err := logCollector.Start(ctx); err != nil {
@@ -73,6 +88,24 @@ func main() {
 	go func() {
 		if err := eventCollector.Start(ctx); err != nil {
 			logger.Error("event collector error", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		if err := appLogAnalyzer.Start(ctx); err != nil {
+			logger.Error("app log analyzer error", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		if err := clusterHealthCollector.Start(ctx); err != nil {
+			logger.Error("cluster health collector error", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		if err := securityCollector.Start(ctx); err != nil {
+			logger.Error("security threat collector error", zap.Error(err))
 		}
 	}()
 

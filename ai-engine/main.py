@@ -19,6 +19,9 @@ from app.services.anomaly_detector import AnomalyDetector
 from app.services.incident_predictor import IncidentPredictor
 from app.services.rca_engine import RCAEngine
 from app.services.alert_dispatcher import AlertDispatcher
+from app.services.app_log_analyzer import AppLogAnalyzer
+from app.services.cluster_health_analyzer import ClusterHealthAnalyzer
+from app.services.security_threat_detector import SecurityThreatDetector
 from app.grpc_server import start_grpc_server
 
 logging.basicConfig(
@@ -47,11 +50,18 @@ async def lifespan(app: FastAPI):
     rca_engine = RCAEngine()
     alert_dispatcher = AlertDispatcher()
 
+    app_log_analyzer = AppLogAnalyzer()
+    cluster_health_analyzer = ClusterHealthAnalyzer()
+    security_threat_detector = SecurityThreatDetector()
+
     # Store in app state for dependency injection
     app.state.anomaly_detector = anomaly_detector
     app.state.incident_predictor = incident_predictor
     app.state.rca_engine = rca_engine
     app.state.alert_dispatcher = alert_dispatcher
+    app.state.app_log_analyzer = app_log_analyzer
+    app.state.cluster_health_analyzer = cluster_health_analyzer
+    app.state.security_threat_detector = security_threat_detector
 
     # Start gRPC server for agent communication
     grpc_task = asyncio.create_task(
@@ -61,6 +71,9 @@ async def lifespan(app: FastAPI):
             incident_predictor=incident_predictor,
             rca_engine=rca_engine,
             alert_dispatcher=alert_dispatcher,
+            app_log_analyzer=app_log_analyzer,
+            cluster_health_analyzer=cluster_health_analyzer,
+            security_threat_detector=security_threat_detector,
         )
     )
 

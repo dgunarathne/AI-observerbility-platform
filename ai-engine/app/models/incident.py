@@ -22,6 +22,14 @@ class IncidentStatus(str, PyEnum):
     FALSE_POSITIVE = "false_positive"
 
 
+class IncidentType(str, PyEnum):
+    APP_ANOMALY = "app_anomaly"          # Application log / metric anomaly
+    CLUSTER_HEALTH = "cluster_health"    # Kubernetes cluster health issue
+    SECURITY_THREAT = "security_threat"  # Security / external attack
+    PREDICTION = "prediction"            # ML-predicted future incident
+    K8S_EVENT = "k8s_event"             # Kubernetes warning event
+
+
 class Incident(Base):
     __tablename__ = "incidents"
 
@@ -34,6 +42,11 @@ class Incident(Base):
     status: Mapped[IncidentStatus] = mapped_column(
         Enum(IncidentStatus), default=IncidentStatus.ACTIVE, index=True
     )
+    incident_type: Mapped[IncidentType] = mapped_column(
+        Enum(IncidentType), default=IncidentType.K8S_EVENT, index=True
+    )
+    threat_category: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
     namespace: Mapped[str | None] = mapped_column(String(253), nullable=True, index=True)
     pod_name: Mapped[str | None] = mapped_column(String(253), nullable=True)
     node_name: Mapped[str | None] = mapped_column(String(253), nullable=True)

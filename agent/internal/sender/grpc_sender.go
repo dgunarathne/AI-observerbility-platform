@@ -89,6 +89,48 @@ func (s *GRPCSender) SendEvent(ctx context.Context, entry EventEntry) error {
 	return nil
 }
 
+func (s *GRPCSender) SendAppHealthReports(ctx context.Context, reports []AppHealthReport) error {
+	payload, err := json.Marshal(reports)
+	if err != nil {
+		return fmt.Errorf("marshal app health: %w", err)
+	}
+	var reply []byte
+	if err := s.conn.Invoke(ctx, "/ai.ObservabilityService/IngestAppHealth",
+		&rawMessage{Data: payload}, &rawMessage{Data: reply}); err != nil {
+		return fmt.Errorf("IngestAppHealth rpc: %w", err)
+	}
+	s.logger.Debug("Sent app health reports", zap.Int("count", len(reports)))
+	return nil
+}
+
+func (s *GRPCSender) SendClusterHealth(ctx context.Context, report ClusterHealthReport) error {
+	payload, err := json.Marshal(report)
+	if err != nil {
+		return fmt.Errorf("marshal cluster health: %w", err)
+	}
+	var reply []byte
+	if err := s.conn.Invoke(ctx, "/ai.ObservabilityService/IngestClusterHealth",
+		&rawMessage{Data: payload}, &rawMessage{Data: reply}); err != nil {
+		return fmt.Errorf("IngestClusterHealth rpc: %w", err)
+	}
+	s.logger.Debug("Sent cluster health report")
+	return nil
+}
+
+func (s *GRPCSender) SendSecurityThreat(ctx context.Context, threat ThreatIndicator) error {
+	payload, err := json.Marshal([]ThreatIndicator{threat})
+	if err != nil {
+		return fmt.Errorf("marshal threat: %w", err)
+	}
+	var reply []byte
+	if err := s.conn.Invoke(ctx, "/ai.ObservabilityService/IngestSecurityThreats",
+		&rawMessage{Data: payload}, &rawMessage{Data: reply}); err != nil {
+		return fmt.Errorf("IngestSecurityThreats rpc: %w", err)
+	}
+	s.logger.Info("Security threat sent", zap.String("category", threat.Category), zap.String("severity", threat.Severity))
+	return nil
+}
+
 func (s *GRPCSender) Close() error {
 	return s.conn.Close()
 }

@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, NavLink } from "react-router-dom";
-import { Activity, AlertTriangle, BarChart2, FileSearch, Home } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, FileSearch, Home, Shield, Server, Cpu } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
 import Incidents from "./pages/Incidents";
 import IncidentDetail from "./pages/IncidentDetail";
 import Logs from "./pages/Logs";
 import Metrics from "./pages/Metrics";
+import Security from "./pages/Security";
+import ClusterHealth from "./pages/ClusterHealth";
+import AppHealth from "./pages/AppHealth";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, refetchInterval: 30_000 } },
@@ -14,6 +17,9 @@ const queryClient = new QueryClient({
 const navItems = [
   { to: "/", label: "Overview", icon: Home },
   { to: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { to: "/security", label: "Security", icon: Shield },
+  { to: "/cluster", label: "Cluster Health", icon: Server },
+  { to: "/apps", label: "App Health", icon: Cpu },
   { to: "/logs", label: "Logs", icon: FileSearch },
   { to: "/metrics", label: "Metrics", icon: BarChart2 },
 ];
@@ -59,6 +65,9 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/incidents" element={<Incidents />} />
               <Route path="/incidents/:id" element={<IncidentDetail />} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/cluster" element={<ClusterHealth />} />
+              <Route path="/apps" element={<AppHealth />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/metrics" element={<Metrics />} />
             </Routes>

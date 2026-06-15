@@ -51,6 +51,7 @@ class AlertDispatcher:
         rca_summary: Optional[str] = None,
         preventive_actions: Optional[list] = None,
         is_prediction: bool = False,
+        alert_type: str = "incident",   # "incident" | "security" | "cluster_health" | "app_anomaly"
     ) -> dict:
         """
         Send alert to all enabled channels.
@@ -64,7 +65,15 @@ class AlertDispatcher:
             return {"suppressed": True, "reason": "cooldown"}
 
         results = {}
-        prefix = "⚠️ PREDICTED INCIDENT" if is_prediction else "🚨 INCIDENT DETECTED"
+        prefix_map = {
+            "security": "🛡️ SECURITY THREAT",
+            "cluster_health": "🏥 CLUSTER HEALTH",
+            "app_anomaly": "📊 APP ANOMALY",
+        }
+        if is_prediction:
+            prefix = "⚠️ PREDICTED INCIDENT"
+        else:
+            prefix = prefix_map.get(alert_type, "🚨 INCIDENT DETECTED")
         full_title = f"{SEVERITY_EMOJI.get(severity, '')} {prefix}: {title}"
 
         if settings.SLACK_WEBHOOK_URL:

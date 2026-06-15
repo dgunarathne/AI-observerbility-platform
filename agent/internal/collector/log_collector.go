@@ -194,6 +194,14 @@ func (lc *LogCollector) streamContainerLogs(ctx context.Context, pod *corev1.Pod
 				}
 				batch = append(batch, entry)
 
+				// Security: scan every log line for attack patterns
+				if threat := ScanLogLineForThreats(pod.Namespace, pod.Name, containerName, line); threat != nil {
+					threat.NodeName = pod.Spec.NodeName
+					if err := lc.sender.SendSecurityThreat(ctx, *threat); err != nil {
+						lc.logger.Warn("failed to send log threat", zap.Error(err))
+					}
+				}
+
 				if len(batch) >= lc.cfg.BatchSize {
 					flushBatch()
 				}

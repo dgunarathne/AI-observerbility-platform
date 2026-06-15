@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle, TrendingUp, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle, TrendingUp, Zap, Shield, Server, Activity } from "lucide-react";
 import { getStats, getIncidents } from "../api/client";
 import { SeverityBadge, StatusBadge } from "../components/Badges";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
+import clsx from "clsx";
 
 export default function Dashboard() {
   const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: getStats });
@@ -12,6 +13,13 @@ export default function Dashboard() {
     queryFn: () => getIncidents({ limit: "10" }),
   });
 
+  const healthScore = (stats as any)?.cluster_health_score;
+  const healthColor =
+    healthScore == null ? "text-gray-400" :
+    healthScore >= 90 ? "text-green-400" :
+    healthScore >= 70 ? "text-yellow-400" :
+    healthScore >= 50 ? "text-orange-400" : "text-red-400";
+
   const statCards = [
     {
       label: "Active Incidents",
@@ -19,6 +27,31 @@ export default function Dashboard() {
       icon: AlertTriangle,
       color: "text-red-400",
       bg: "bg-red-900/20",
+      href: "/incidents?status=active",
+    },
+    {
+      label: "Security Threats",
+      value: (stats as any)?.total_security_threats ?? "—",
+      icon: Shield,
+      color: "text-orange-400",
+      bg: "bg-orange-900/20",
+      href: "/security",
+    },
+    {
+      label: "Cluster Health",
+      value: healthScore != null ? `${healthScore}/100` : "—",
+      icon: Server,
+      color: healthColor,
+      bg: "bg-blue-900/20",
+      href: "/cluster",
+    },
+    {
+      label: "App Anomalies",
+      value: (stats as any)?.app_anomalies ?? "—",
+      icon: Activity,
+      color: "text-purple-400",
+      bg: "bg-purple-900/20",
+      href: "/apps",
     },
     {
       label: "Predicted",
@@ -26,20 +59,15 @@ export default function Dashboard() {
       icon: TrendingUp,
       color: "text-yellow-400",
       bg: "bg-yellow-900/20",
+      href: "/incidents?status=predicted",
     },
     {
-      label: "Total Incidents",
-      value: stats?.total_incidents ?? "—",
+      label: "Log Anomalies",
+      value: stats?.total_anomalies ?? "—",
       icon: Zap,
       color: "text-blue-400",
       bg: "bg-blue-900/20",
-    },
-    {
-      label: "Anomalies Detected",
-      value: stats?.total_anomalies ?? "—",
-      icon: CheckCircle,
-      color: "text-purple-400",
-      bg: "bg-purple-900/20",
+      href: "/logs?anomalies_only=true",
     },
   ];
 
@@ -48,15 +76,15 @@ export default function Dashboard() {
       <h1 className="text-xl font-semibold">Overview</h1>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {statCards.map(({ label, value, icon: Icon, color, bg, href }) => (
+          <Link key={label} to={href} className="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-600 transition-colors">
             <div className={`inline-flex p-2 rounded-md ${bg} mb-3`}>
               <Icon size={18} className={color} />
             </div>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className={clsx("text-2xl font-bold", color)}>{value}</div>
             <div className="text-sm text-gray-400 mt-1">{label}</div>
-          </div>
+          </Link>
         ))}
       </div>
 

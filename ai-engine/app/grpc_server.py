@@ -26,9 +26,9 @@ OBSERVABILITY_SERVICE_FULL_NAME = "ai.ObservabilityService"
 
 
 class ObservabilityServicer:
-    """Handles IngestLogs, IngestMetrics, IngestEvents RPCs."""
+    """Handles all RPC methods."""
 
-    def __init__(self, ingestion_service: IngestionService):
+    def __init__(self, ingestion_service):
         self.ingestion = ingestion_service
 
     async def IngestLogs(self, request, context):
@@ -61,19 +61,56 @@ class ObservabilityServicer:
             context.set_details(str(e))
         return b"{}"
 
+    async def IngestAppHealth(self, request, context):
+        try:
+            reports = json.loads(request)
+            await self.ingestion.ingest_app_health(reports)
+        except Exception as e:
+            logger.error("IngestAppHealth error: %s", e)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+        return b"{}"
+
+    async def IngestClusterHealth(self, request, context):
+        try:
+            report = json.loads(request)
+            await self.ingestion.ingest_cluster_health(report)
+        except Exception as e:
+            logger.error("IngestClusterHealth error: %s", e)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+        return b"{}"
+
+    async def IngestSecurityThreats(self, request, context):
+        try:
+            threats = json.loads(request)
+            await self.ingestion.ingest_security_threats(threats)
+        except Exception as e:
+            logger.error("IngestSecurityThreats error: %s", e)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+        return b"{}"
+
 
 async def start_grpc_server(
     port: int,
-    anomaly_detector: AnomalyDetector,
-    incident_predictor: IncidentPredictor,
-    rca_engine: RCAEngine,
-    alert_dispatcher: AlertDispatcher,
+    anomaly_detector,
+    incident_predictor,
+    rca_engine,
+    alert_dispatcher,
+    app_log_analyzer,
+    cluster_health_analyzer,
+    security_threat_detector,
 ):
+    from app.services.ingestion_service import IngestionService
     ingestion = IngestionService(
         anomaly_detector=anomaly_detector,
         incident_predictor=incident_predictor,
         rca_engine=rca_engine,
         alert_dispatcher=alert_dispatcher,
+        app_log_analyzer=app_log_analyzer,
+        cluster_health_analyzer=cluster_health_analyzer,
+        security_threat_detector=security_threat_detector,
     )
 
     servicer = ObservabilityServicer(ingestion)
@@ -84,9 +121,12 @@ async def start_grpc_server(
     from grpc import GenericRpcHandler, unary_unary_rpc_method_handler
 
     handlers = {
-        "IngestLogs": unary_unary_rpc_method_handler(servicer.IngestLogs),
-        "IngestMetrics": unary_unary_rpc_method_handler(servicer.IngestMetrics),
-        "IngestEvents": unary_unary_rpc_method_handler(servicer.IngestEvents),
+        "IngestLogs":            unary_unary_rpc_method_handler(servicer.IngestLogs),
+        "IngestMetrics":         unary_unary_rpc_method_handler(servicer.IngestMetrics),
+        "IngestEvents":          unary_unary_rpc_method_handler(servicer.IngestEvents),
+        "IngestAppHealth":       unary_unary_rpc_method_handler(servicer.IngestAppHealth),
+        "IngestClusterHealth":   unary_unary_rpc_method_handler(servicer.IngestClusterHealth),
+        "IngestSecurityThreats": unary_unary_rpc_method_handler(servicer.IngestSecurityThreats),
     }
 
     from grpc import method_service_name, ServiceRpcHandlers
