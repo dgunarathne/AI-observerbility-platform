@@ -1,0 +1,45 @@
+{{- if .Values.aiEngine.enabled }}
+---
+# AI Engine Service (HTTP + gRPC)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-observability.fullname" . }}-engine
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-observability.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-engine
+spec:
+  type: {{ .Values.aiEngine.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.aiEngine.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.aiEngine.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+  selector:
+    app: {{ include "ai-observability.fullname" . }}-engine
+{{- end }}
+
+{{- if .Values.qdrant.enabled }}
+---
+# Qdrant Vector DB Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-observability.fullname" . }}-qdrant
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-observability.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.qdrant.service.port }}
+      targetPort: 6333
+  selector:
+    app: {{ include "ai-observability.fullname" . }}-qdrant
+{{- end }}

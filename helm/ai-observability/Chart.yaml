@@ -1,0 +1,15 @@
+apiVersion: v2
+name: ai-observability
+description: AI-powered Kubernetes observability platform with proactive incident detection and RCA
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - observability
+  - monitoring
+  - ai
+  - kubernetes
+  - incident-management
+  - rca
+maintainers:
+  - name: platform-team

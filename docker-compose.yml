@@ -1,0 +1,100 @@
+version: "3.9"
+
+services:
+  # ─── Infrastructure ─────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aiobs
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: ai_observability
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiobs -d ai_observability"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.3
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ─── AI Engine ───────────────────────────────────────────────────────────────
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"   # HTTP API
+      - "50051:50051" # gRPC
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://aiobs:changeme@postgres:5432/ai_observability"
+      REDIS_URL: "redis://redis:6379/0"
+      QDRANT_URL: "http://qdrant:6333"
+      LLM_PROVIDER: "${LLM_PROVIDER:-openai}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o}"
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3}"
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
+      SLACK_CHANNEL: "${SLACK_CHANNEL:-#alerts}"
+      TEAMS_WEBHOOK_URL: "${TEAMS_WEBHOOK_URL:-}"
+      PAGERDUTY_ROUTING_KEY: "${PAGERDUTY_ROUTING_KEY:-}"
+      ANOMALY_SENSITIVITY: "0.05"
+      PREDICTION_THRESHOLD: "0.75"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./ai-engine:/app  # live reload in dev
+
+  # ─── Ollama (optional local LLM) ────────────────────────────────────────────
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles: ["ollama"]  # opt-in: docker compose --profile ollama up
+
+  # ─── Dashboard (React) ───────────────────────────────────────────────────────
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: "http://localhost:8080/api/v1"
+    depends_on:
+      - ai-engine
+    profiles: ["dashboard"]
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  ollama_data:

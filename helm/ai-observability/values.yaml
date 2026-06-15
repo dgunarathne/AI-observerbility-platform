@@ -1,0 +1,149 @@
+# Default values for ai-observability Helm chart.
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  nameOverride: ""
+  namespace: "ai-observability"
+
+# ─── Agent (DaemonSet) ───────────────────────────────────────────────────────
+agent:
+  enabled: true
+  image:
+    repository: ghcr.io/your-org/ai-obs-agent
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  
+  # Resources per node
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+
+  # Environment config
+  config:
+    flushIntervalSeconds: 5
+    batchSize: 100
+    logTailLines: 100
+    watchNamespace: ""   # empty = all namespaces
+
+  # Tolerations to run on all nodes including master
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+
+  # Extra volume mounts (e.g. for host log access)
+  extraVolumeMounts: []
+  extraVolumes: []
+
+# ─── AI Engine (Deployment) ─────────────────────────────────────────────────
+aiEngine:
+  enabled: true
+  image:
+    repository: ghcr.io/your-org/ai-obs-engine
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 2
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+  service:
+    type: ClusterIP
+    httpPort: 8080
+    grpcPort: 50051
+
+  # LLM provider: openai | ollama | anthropic
+  llmProvider: "openai"
+  openaiApiKey: ""          # Set via --set or secret
+  openaiModel: "gpt-4o"
+  ollamaBaseUrl: "http://ollama:11434"
+  ollamaModel: "llama3"
+  anthropicApiKey: ""
+
+  # Anomaly detection tuning
+  anomalySensitivity: "0.05"
+  anomalyWindowMinutes: "15"
+  predictionHorizonMinutes: "30"
+  predictionThreshold: "0.75"
+
+  # RCA settings
+  rcaLogLookbackMinutes: "60"
+  rcaMaxLogLines: "500"
+
+# ─── Alert Manager ───────────────────────────────────────────────────────────
+alertManager:
+  slack:
+    webhookUrl: ""          # https://hooks.slack.com/services/...
+    channel: "#alerts"
+  teams:
+    webhookUrl: ""
+  pagerduty:
+    routingKey: ""
+  cooldownMinutes: "15"
+
+# ─── PostgreSQL (sub-chart) ──────────────────────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    username: aiobs
+    password: changeme
+    database: ai_observability
+  primary:
+    persistence:
+      size: 20Gi
+
+# ─── Redis (sub-chart) ───────────────────────────────────────────────────────
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      size: 2Gi
+
+# ─── Qdrant Vector DB ────────────────────────────────────────────────────────
+qdrant:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: qdrant/qdrant
+    tag: "v1.9.3"
+  service:
+    port: 6333
+  persistence:
+    size: 10Gi
+
+# ─── RBAC ────────────────────────────────────────────────────────────────────
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ─── Ingress ─────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: ai-obs.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
