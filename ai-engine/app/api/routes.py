@@ -447,8 +447,24 @@ async def app_baselines(request: Request):
     return analyzer.get_baselines_summary()
 
 
-@router.get("/apps/health/summary")
-async def app_health_summary(db: AsyncSession = Depends(get_db)):
+@router.get("/alerts/channels")
+async def list_alert_channels():
+    """Return which alert channels are configured (for dashboard and demo runner)."""
+    from app.core.config import settings as cfg
+    channels = [
+        {"name": "Slack",        "enabled": bool(cfg.SLACK_WEBHOOK_URL)},
+        {"name": "Teams",        "enabled": bool(cfg.TEAMS_WEBHOOK_URL)},
+        {"name": "Email",        "enabled": cfg.EMAIL_ENABLED and bool(cfg.EMAIL_TO_ADDRESSES)},
+        {"name": "SMS (Twilio)", "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.SMS_TO_NUMBERS)},
+        {"name": "Voice Call",   "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.VOICE_CALL_NUMBERS)},
+        {"name": "WhatsApp",     "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.WHATSAPP_TO_NUMBERS)},
+        {"name": "Discord",      "enabled": bool(cfg.DISCORD_WEBHOOK_URL)},
+        {"name": "Telegram",     "enabled": bool(cfg.TELEGRAM_BOT_TOKEN and cfg.TELEGRAM_CHAT_IDS)},
+        {"name": "OpsGenie",     "enabled": bool(cfg.OPSGENIE_API_KEY)},
+        {"name": "PagerDuty",    "enabled": bool(cfg.PAGERDUTY_ROUTING_KEY)},
+        {"name": "Webhook",      "enabled": bool(cfg.GENERIC_WEBHOOK_URLS)},
+    ]
+    return channels(db: AsyncSession = Depends(get_db)):
     """Aggregated per-app anomaly counts for the dashboard."""
     result = await db.execute(
         select(
@@ -478,4 +494,24 @@ async def app_health_summary(db: AsyncSession = Depends(get_db)):
             "last_seen": r.last_seen,
         }
         for r in rows
+    ]
+
+# ─── Alert Channels ───────────────────────────────────────────────────────────
+
+@router.get("/alerts/channels")
+async def list_alert_channels():
+    """Return which alert channels are configured (for dashboard and demo runner)."""
+    from app.core.config import settings as cfg
+    return [
+        {"name": "Slack",        "enabled": bool(cfg.SLACK_WEBHOOK_URL)},
+        {"name": "Teams",        "enabled": bool(cfg.TEAMS_WEBHOOK_URL)},
+        {"name": "Email",        "enabled": cfg.EMAIL_ENABLED and bool(cfg.EMAIL_TO_ADDRESSES)},
+        {"name": "SMS (Twilio)", "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.SMS_TO_NUMBERS)},
+        {"name": "Voice Call",   "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.VOICE_CALL_NUMBERS)},
+        {"name": "WhatsApp",     "enabled": bool(cfg.TWILIO_ACCOUNT_SID and cfg.WHATSAPP_TO_NUMBERS)},
+        {"name": "Discord",      "enabled": bool(cfg.DISCORD_WEBHOOK_URL)},
+        {"name": "Telegram",     "enabled": bool(cfg.TELEGRAM_BOT_TOKEN and cfg.TELEGRAM_CHAT_IDS)},
+        {"name": "OpsGenie",     "enabled": bool(cfg.OPSGENIE_API_KEY)},
+        {"name": "PagerDuty",    "enabled": bool(cfg.PAGERDUTY_ROUTING_KEY)},
+        {"name": "Webhook",      "enabled": bool(cfg.GENERIC_WEBHOOK_URLS)},
     ]

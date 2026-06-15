@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router as api_router
+from app.api.ingest_routes import ingest_router
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.redis_client import init_redis, close_redis
@@ -77,6 +78,18 @@ async def lifespan(app: FastAPI):
         )
     )
 
+    # Also expose IngestionService on app state for the HTTP ingest shim
+    from app.services.ingestion_service import IngestionService
+    app.state.ingestion_service = IngestionService(
+        anomaly_detector=anomaly_detector,
+        incident_predictor=incident_predictor,
+        rca_engine=rca_engine,
+        alert_dispatcher=alert_dispatcher,
+        app_log_analyzer=app_log_analyzer,
+        cluster_health_analyzer=cluster_health_analyzer,
+        security_threat_detector=security_threat_detector,
+    )
+
     logger.info(f"gRPC server starting on port {settings.GRPC_PORT}")
     logger.info(f"HTTP API starting on port {settings.HTTP_PORT}")
 
@@ -106,6 +119,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(ingest_router, prefix="/api/v1")
 
 
 @app.get("/health")
